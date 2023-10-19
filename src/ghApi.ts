@@ -29,4 +29,22 @@ const getTags = function(owner: string, repo: string): Promise<string[]> {
     });
 }
 
-export { getTags };
+const getFileContent = function(owner: string, repo: string, ref: string, path: string): Promise<string> {
+  if(!path.startsWith('/')) {
+    throw Error('path must start with "/".');
+  }
+  const url = new URL(`https://raw.githubusercontent.com/${owner}/${repo}/${ref}${path}`)
+
+  return fetch(url)
+  .then(async (res) => {
+    if(!res.ok) {
+      throw Error(`Failed to fetch tags: ${res.status} ${await res.text()}`);
+    }
+    return res;
+  })
+  .then((res) => {
+    return res.text();
+  });
+}
+
+export { getTags, getFileContent };
