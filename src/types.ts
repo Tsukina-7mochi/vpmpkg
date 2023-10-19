@@ -35,7 +35,9 @@ type VPMRepoManifest = {
   url: string,
   author: string,
   packages: {
-    versions: { [key: string]: VMPPackageManifest },
+    [key: string]: {
+      versions: { [key: string]: VMPPackageManifest },
+    }
   },
 };
 

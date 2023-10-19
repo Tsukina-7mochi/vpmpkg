@@ -14,9 +14,9 @@ const getTags = function(owner: string, repo: string): Promise<string[]> {
   }
 
   return fetch(url, { headers })
-    .then(async (res) => {
+    .then((res) => {
       if(!res.ok) {
-        throw Error(`Failed to fetch tags: ${res.status} ${await res.text()}`);
+        throw Error(`Failed to fetch tags: ${res.status}`);
       }
       return res;
     })
@@ -36,9 +36,9 @@ const getFileContent = function(owner: string, repo: string, ref: string, path: 
   const url = new URL(`https://raw.githubusercontent.com/${owner}/${repo}/${ref}${path}`)
 
   return fetch(url)
-  .then(async (res) => {
+  .then((res) => {
     if(!res.ok) {
-      throw Error(`Failed to fetch tags: ${res.status} ${await res.text()}`);
+      throw Error(`Failed to fetch tags: ${res.status}`);
     }
     return res;
   })

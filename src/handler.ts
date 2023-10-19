@@ -1,32 +1,39 @@
-import { getTags } from './ghApi.ts';
+import createRepoManifest from './createRepoManifest.ts';
 import wrapInTry from './wrapInTry.ts';
 
 const handler_ = async (request: Request): Promise<Response> => {
-  const pathname = new URL(request.url).pathname;
+  const url = new URL(request.url);
 
-  if(!(/^\/\w+\/\w+\/$/.test(pathname))) {
+  const pathSegments = url.pathname.split('/');
+  if(pathSegments.length < 4) {
     return new Response(JSON.stringify({
       message: 'Bad Request',
-      usage: 'GET: /{OWNER}/{REPO}/'
-    }), {
-      status: 400,
-      statusText: 'Bad Request'
-    });
+      usage: '/{OWNER}/{REPO}/{PATH}',
+    }));
   }
 
-  const [userName, repoName] = pathname.split('/').slice(1);
+  const owner = pathSegments[1];
+  const repo = pathSegments[2];
+  const pkgManifestPath = ((): string => {
+    const path = `/${pathSegments.slice(3).join('/')}`;
+    if(path.endsWith('/')) {
+      return `${path}package.json`;
+    }
+    return path;
+  })();
 
   try {
-    const tags = await getTags(userName, repoName);
+    const manifest = await createRepoManifest(owner, repo, pkgManifestPath, url.href);
 
-    return new Response(JSON.stringify(tags));
-  } catch {
+    return new Response(JSON.stringify(manifest));
+  } catch(err_) {
+    const err = err_ instanceof Error
+      ? ({ message: err_.message, cause: err_.cause })
+      : err_;
     return new Response(JSON.stringify({
       message: 'Not Found',
-    }), {
-      status: 404,
-      statusText: 'Not Found',
-    });
+      cause: err,
+    }), { status: 404, statusText: 'Not Found' });
   }
 }
 
