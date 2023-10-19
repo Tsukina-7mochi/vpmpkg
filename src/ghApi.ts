@@ -1,4 +1,4 @@
-import apiToken from './apiToken.ts';
+import { apiToken } from './env.ts';
 
 const apiEndPoint = new URL('https://api.github.com');
 

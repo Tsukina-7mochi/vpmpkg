@@ -1,7 +1,7 @@
 import { Server } from 'http/mod.ts';
 import * as colors from 'fmt/colors.ts';
 import handler from './handler.ts';
-import apiToken from './apiToken.ts';
+import { apiToken } from './env.ts';
 
 const hostname = '0.0.0.0';
 const port = 8080;
