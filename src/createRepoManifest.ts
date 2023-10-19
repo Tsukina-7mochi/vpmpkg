@@ -1,12 +1,13 @@
 import * as ghAPI from './ghApi.ts';
 import { VMPPackageManifest, VPMRepoManifest } from './types.ts';
 
-const isFulfilled = <T>(promise: PromiseSettledResult<T>):
-  promise is PromiseSettledResult<T> & { status: 'fulfilled' } => {
+const isFulfilled = <T>(
+  promise: PromiseSettledResult<T>,
+): promise is PromiseSettledResult<T> & { status: 'fulfilled' } => {
   return promise.status === 'fulfilled';
-}
+};
 
-const createRepoManifest = async function(
+const createRepoManifest = async function (
   owner: string,
   repo: string,
   pkgManifestPath: string,
@@ -15,18 +16,20 @@ const createRepoManifest = async function(
   const pkgId = `io.github.${owner}.${repo}`;
 
   const tags = await ghAPI.getTags(owner, repo);
-  const pkgManifestPromises = tags.map((tag) => ghAPI.getFileContent(owner, repo, tag, pkgManifestPath));
+  const pkgManifestPromises = tags.map((tag) =>
+    ghAPI.getFileContent(owner, repo, tag, pkgManifestPath)
+  );
   const pkgManifestResults = await Promise.allSettled(pkgManifestPromises);
   const pkgManifests = pkgManifestResults
     .filter(isFulfilled)
     .map((result) => JSON.parse(result.value) as VMPPackageManifest);
 
-  if(pkgManifests.length === 0) {
+  if (pkgManifests.length === 0) {
     throw Error('Cannot fetch any package.json');
   }
 
   const pkgVersions: Record<string, VMPPackageManifest> = {};
-  for(const manifest of pkgManifests) {
+  for (const manifest of pkgManifests) {
     pkgVersions[manifest.version] = {
       ...manifest,
       name: pkgId,
@@ -43,7 +46,7 @@ const createRepoManifest = async function(
         versions: pkgVersions,
       },
     },
-  }
-}
+  };
+};
 
 export default createRepoManifest;
