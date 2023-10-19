@@ -1,0 +1,43 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "strict": true,
+    "strictNullChecks": true,
+    "noImplicitThis": true,
+    "noImplicitAny": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "lib": [
+      "DOM",
+      "ESNext",
+      "deno.window"
+    ]
+  },
+  "lint": {
+    "files": {
+      "include": ["src/"],
+      "exclude": ["dist/"]
+    },
+    "rules": {
+      "tags": ["recommended"],
+      "include": ["explicit-function-return-type"]
+    }
+  },
+  "fmt": {
+    "files": {
+      "include": ["src/"],
+      "exclude": ["dist/"]
+    },
+    "options": {
+      "indentWidth": 2,
+      "lineWidth": 80,
+      "proseWrap": "always",
+      "singleQuote": true,
+      "useTabs": false
+    }
+  },
+  "importMap": "import_map.json",
+  "tasks": {
+    "run": "deno run --allow-net --allow-read --allow-write src/mod.ts"
+  }
+}
