@@ -1,8 +1,8 @@
 import { Server } from 'http/mod.ts';
 import handler from './handler.ts';
+import env from './env.ts';
 
-const hostname = '0.0.0.0';
-const port = 8080;
+const { hostname, port } = env;
 
 const server = new Server({ hostname, port, handler });
 

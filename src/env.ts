@@ -10,9 +10,17 @@ for(const key in dotenvContent) {
 
 const apiToken = Deno.env.get('GH_API_TOKEN');
 const cacheDir = Deno.env.get('CACHE_DIR');
+const hostname = Deno.env.get('HOSTNAME');
+const port = Deno.env.get('PORT');
 
 if (typeof cacheDir !== 'string') {
-  throw Error('Cache directory is not specified.');
+  throw Error('Cache directory not specified.');
+}
+if (typeof hostname !== 'string') {
+  throw Error('Hostname not specified.');
+}
+if (typeof port !== 'string') {
+  throw Error('Port not specified.');
 }
 
 if (typeof apiToken !== 'string') {
@@ -23,6 +31,11 @@ if (typeof apiToken !== 'string') {
   );
 }
 
-const env = { apiToken, cacheDir };
+const env = {
+  apiToken,
+  cacheDir,
+  hostname,
+  port: parseInt(port)
+};
 
 export default env;
