@@ -12,6 +12,8 @@ const apiToken = Deno.env.get('GH_API_TOKEN');
 const cacheDir = Deno.env.get('CACHE_DIR');
 const hostname = Deno.env.get('HOSTNAME');
 const port = Deno.env.get('PORT');
+const tlsCertFilePath = Deno.env.get('TLS_CERT_FILE_PATH');
+const tlsKeyFilePath = Deno.env.get('TLS_KEY_FILE_PATH');
 
 if (typeof cacheDir !== 'string') {
   throw Error('Cache directory not specified.');
@@ -35,7 +37,9 @@ const env = {
   apiToken,
   cacheDir,
   hostname,
-  port: parseInt(port)
+  port: parseInt(port),
+  tlsCertFilePath,
+  tlsKeyFilePath,
 };
 
 export default env;
