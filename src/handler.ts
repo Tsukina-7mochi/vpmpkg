@@ -1,4 +1,4 @@
-const handler = function(request: Request): Response {
+const handler = (request: Request): Response => {
   const pathname = new URL(request.url).pathname;
 
   if(!(/^\/\w+\/\w+\/$/.test(pathname))) {
