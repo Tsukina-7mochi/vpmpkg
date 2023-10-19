@@ -11,10 +11,9 @@ const createRepoManifest = async function (
   owner: string,
   repo: string,
   pkgManifestPath: string,
+  pkgId: string,
   manifestUrl: string,
 ): Promise<VPMRepoManifest> {
-  const pkgId = `io.github.${owner}.${repo}`;
-
   const tags = await ghAPI.getTags(owner, repo);
   const pkgManifestPromises = tags.map((tag) =>
     ghAPI.getFileContent(owner, repo, tag, pkgManifestPath)

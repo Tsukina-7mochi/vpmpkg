@@ -21,12 +21,19 @@ const handler_ = async (request: Request): Promise<Response> => {
     }
     return path;
   })();
+  let pkgId = `net.ts7m.vpmpkg.${owner}.${repo}`;
+  for(const [key, value] of url.searchParams) {
+    if(key === 'pkgId') {
+      pkgId = value;
+    }
+  }
 
   try {
     const manifest = await createRepoManifest(
       owner,
       repo,
       pkgManifestPath,
+      pkgId,
       url.href,
     );
 
