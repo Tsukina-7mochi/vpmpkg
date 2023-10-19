@@ -1,5 +1,9 @@
+import CustomCache from './cache.ts';
 import createRepoManifest from './createRepoManifest.ts';
 import wrapInTry from './wrapInTry.ts';
+import env from './env.ts';
+
+const cache = new CustomCache(env.cacheDir);
 
 const handler_ = async (request: Request): Promise<Response> => {
   const url = new URL(request.url);
@@ -35,6 +39,7 @@ const handler_ = async (request: Request): Promise<Response> => {
       pkgManifestPath,
       pkgId,
       url.href,
+      cache,
     );
 
     return new Response(JSON.stringify(manifest));

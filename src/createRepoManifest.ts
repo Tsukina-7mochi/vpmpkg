@@ -1,3 +1,4 @@
+import CustomCache from './cache.ts';
 import * as ghAPI from './ghApi.ts';
 import { VMPPackageManifest, VPMRepoManifest } from './types.ts';
 
@@ -13,10 +14,11 @@ const createRepoManifest = async function (
   pkgManifestPath: string,
   pkgId: string,
   manifestUrl: string,
+  cache?: CustomCache
 ): Promise<VPMRepoManifest> {
   const tags = await ghAPI.getTags(owner, repo);
   const pkgManifestPromises = tags.map((tag) =>
-    ghAPI.getFileContent(owner, repo, tag, pkgManifestPath)
+    ghAPI.getFileContent(owner, repo, tag, pkgManifestPath, cache)
   );
   const pkgManifestResults = await Promise.allSettled(pkgManifestPromises);
   const pkgManifests = pkgManifestResults

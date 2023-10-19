@@ -1,7 +1,12 @@
 {
   "imports": {
+    "crypto": "https://deno.land/std@0.204.0/crypto/mod.ts",
+    "dotenv": "https://deno.land/std@0.204.0/dotenv/mod.ts",
+    "encoding/": "https://deno.land/std@0.204.0/encoding/",
     "fmt/": "https://deno.land/std@0.204.0/fmt/",
+    "fs": "https://deno.land/std@0.204.0/fs/mod.ts",
     "http/": "https://deno.land/std@0.204.0/http/",
-    "std/": "https://deno.land/std@0.204.0/"
+    "std/": "https://deno.land/std@0.204.0/",
+    "path/": "https://deno.land/std@0.204.0/path/"
   }
 }
