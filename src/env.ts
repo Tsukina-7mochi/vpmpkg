@@ -8,8 +8,8 @@ for(const key in dotenvContent) {
   }
 }
 
-const apiToken = Deno.env.get('VPMPKG_GH_API_TOKEN');
-const cacheDir = Deno.env.get('VPMPKG_CACHE_DIR');
+const apiToken = Deno.env.get('GH_API_TOKEN');
+const cacheDir = Deno.env.get('CACHE_DIR');
 
 if (typeof cacheDir !== 'string') {
   throw Error('Cache directory is not specified.');
