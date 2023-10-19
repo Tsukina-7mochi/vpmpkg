@@ -8,6 +8,10 @@ const cache = new CustomCache(env.cacheDir);
 const handler_ = async (request: Request): Promise<Response> => {
   const url = new URL(request.url);
 
+  if(url.pathname === '/') {
+    return new Response('OK');
+  }
+
   const pathSegments = url.pathname.split('/');
   if (pathSegments.length < 4) {
     return new Response(JSON.stringify({
