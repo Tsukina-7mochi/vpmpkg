@@ -29,7 +29,9 @@ const handler_ = async (request: Request): Promise<Response> => {
     }
     return path;
   })();
-  let pkgId = `net.ts7m.vpmpkg.${owner}.${repo}`;
+  const idOwner = owner.toLowerCase().replace(/\W/, '');
+  const idRepo = repo.toLowerCase().replace(/\W/, '');
+  let pkgId = `net.ts7m.vpmpkg.${idOwner}.${idRepo}`;
   for(const [key, value] of url.searchParams) {
     if(key === 'pkgId') {
       pkgId = value;
