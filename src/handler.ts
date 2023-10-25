@@ -12,7 +12,7 @@ const handler_ = async (request: Request): Promise<Response> => {
   const url = new URL(request.url);
 
   if(url.pathname === '/') {
-    return Response.redirect('/web/index.html');
+    return Response.redirect(new URL('/web/index.html', request.url));
   }
   if(url.pathname.startsWith('/web')) {
     const res = await serveDir(request, {
