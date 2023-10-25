@@ -6,7 +6,7 @@ const { hostname, port, tlsCertFilePath, tlsKeyFilePath } = env;
 
 const server = new Server({ hostname, port, handler });
 
-if(typeof tlsCertFilePath === 'string' && typeof tlsKeyFilePath === 'string') {
+if (typeof tlsCertFilePath === 'string' && typeof tlsKeyFilePath === 'string') {
   console.log(`Server started over TLS.
     hostname: ${hostname}
     port    : ${port}
@@ -21,4 +21,3 @@ if(typeof tlsCertFilePath === 'string' && typeof tlsKeyFilePath === 'string') {
 
   await server.listenAndServe();
 }
-

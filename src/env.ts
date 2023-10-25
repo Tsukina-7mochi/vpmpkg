@@ -2,8 +2,8 @@ import * as colors from 'fmt/colors.ts';
 import * as dotenv from 'dotenv';
 
 const dotenvContent = await dotenv.load({ envPath: './.env' });
-for(const key in dotenvContent) {
-  if(!Deno.env.has(key)) {
+for (const key in dotenvContent) {
+  if (!Deno.env.has(key)) {
     Deno.env.set(key, dotenvContent[key]);
   }
 }

@@ -12,22 +12,22 @@ const cache = new CustomCache(env.cacheDir);
 const handler_ = async (request: Request): Promise<Response> => {
   const url = new URL(request.url);
 
-  if(url.pathname === '/') {
+  if (url.pathname === '/') {
     return Response.redirect(new URL('/web/index.html', request.url));
   }
-  if(url.pathname.startsWith('/web')) {
+  if (url.pathname.startsWith('/web')) {
     const res = await serveDir(request, {
       fsRoot: env.pubDir,
       urlRoot: 'web',
     });
 
     const type = contentType(extname(url.pathname));
-    if(typeof type === 'string') {
+    if (typeof type === 'string') {
       return new Response((await res).body, {
         headers: {
           ...res.headers,
-          "Content-Type": type,
-        }
+          'Content-Type': type,
+        },
       });
     } else {
       return res;
@@ -54,8 +54,8 @@ const handler_ = async (request: Request): Promise<Response> => {
   const idOwner = owner.toLowerCase().replace(/\W/, '');
   const idRepo = repo.toLowerCase().replace(/\W/, '');
   let pkgId = `net.ts7m.vpmpkg.${idOwner}.${idRepo}`;
-  for(const [key, value] of url.searchParams) {
-    if(key === 'pkgId') {
+  for (const [key, value] of url.searchParams) {
+    if (key === 'pkgId') {
       pkgId = value;
     }
   }
@@ -96,6 +96,8 @@ const serverErrorResponsePromise = Promise.resolve(
     },
   ),
 );
-const handler = logHandler(wrapInTry(handler_, () => serverErrorResponsePromise));
+const handler = logHandler(
+  wrapInTry(handler_, () => serverErrorResponsePromise),
+);
 
 export default handler;

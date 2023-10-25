@@ -5,13 +5,13 @@ import * as posix from 'path/posix/mod.ts';
 
 const textEncoder = new TextEncoder();
 
-const hashText = function(text: string): Promise<string> {
+const hashText = function (text: string): Promise<string> {
   const encoded = textEncoder.encode(text);
   return crypto.subtle.digest('SHA-256', encoded)
     .then((hashed) => {
       return encodeHex(hashed);
     });
-}
+};
 
 class CustomCache {
   rootDir: string;
@@ -36,7 +36,7 @@ class CustomCache {
     const cachePath = posix.join(this.rootDir, cacheNameHashed);
 
     const uint8ArrayContent = ((): Uint8Array => {
-      if(typeof content === 'string') {
+      if (typeof content === 'string') {
         return textEncoder.encode(content);
       }
       return content;

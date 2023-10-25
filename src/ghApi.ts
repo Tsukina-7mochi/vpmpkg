@@ -32,10 +32,10 @@ const getTags = function (owner: string, repo: string): Promise<string[]> {
 };
 
 type ReleasesAPIResponse = Required<{
-  tag_name: string,
-  assets: Required<{ name: string, browser_download_url: string }>[]
+  tag_name: string;
+  assets: Required<{ name: string; browser_download_url: string }>[];
 }>[];
-const getPkgReleases = async function(
+const getPkgReleases = async function (
   owner: string,
   repo: string,
 ): Promise<Map<string, string>> {
@@ -65,23 +65,24 @@ const getPkgReleases = async function(
   result
     .map((result) => ({
       tag: result.tag_name,
-      zip: result.assets.find((v) => v.name.endsWith('.zip'))?.browser_download_url,
+      zip: result.assets.find((v) => v.name.endsWith('.zip'))
+        ?.browser_download_url,
     }))
     .forEach((release) => {
-      if(typeof release.zip === 'string') {
+      if (typeof release.zip === 'string') {
         map.set(release.tag, release.zip);
       }
     });
 
   return map;
-}
+};
 
 const getFileContent = async function (
   owner: string,
   repo: string,
   ref: string,
   path: string,
-  cache?: CustomCache
+  cache?: CustomCache,
 ): Promise<string> {
   if (!path.startsWith('/')) {
     throw Error('path must start with "/".');
@@ -90,26 +91,26 @@ const getFileContent = async function (
     `https://raw.githubusercontent.com/${owner}/${repo}/${ref}${path}`,
   );
 
-  if(cache !== undefined) {
+  if (cache !== undefined) {
     const cached = await cache.get(url.href);
-    if(cached !== null) {
+    if (cached !== null) {
       return textDecoder.decode(cached);
     }
   }
 
   const res = await fetch(url).then((res) => {
-    if(!res.ok) {
+    if (!res.ok) {
       throw Error(`Failed to fetch tags: ${res.status}`);
     }
     return res;
   });
   const body = await res.text();
 
-  if(cache !== undefined) {
+  if (cache !== undefined) {
     await cache.set(url.href, body);
   }
 
   return body;
 };
 
-export { getTags, getPkgReleases, getFileContent };
+export { getFileContent, getPkgReleases, getTags };

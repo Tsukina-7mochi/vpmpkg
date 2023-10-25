@@ -14,7 +14,7 @@ const createRepoManifest = async function (
   pkgManifestPath: string,
   pkgId: string,
   manifestUrl: string,
-  cache?: CustomCache
+  cache?: CustomCache,
 ): Promise<VPMRepoManifest> {
   const releases = await ghAPI.getPkgReleases(owner, repo);
   const tags = [...releases.keys()];
