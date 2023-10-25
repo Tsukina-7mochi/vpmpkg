@@ -31,6 +31,51 @@ const getTags = function (owner: string, repo: string): Promise<string[]> {
     });
 };
 
+type ReleasesAPIResponse = Required<{
+  tag_name: string,
+  assets: Required<{ name: string, browser_download_url: string }>[]
+}>[];
+const getPkgReleases = async function(
+  owner: string,
+  repo: string,
+): Promise<Map<string, string>> {
+  const url = new URL(`/repos/${owner}/${repo}/releases`, apiEndPoint);
+  const headers = new Headers({
+    'Accept': 'application/vnd.github+json',
+    'X-GitHub-Api-Version': '2022-11-28',
+  });
+  if (typeof env.apiToken === 'string') {
+    headers.append('Authorization', `Bearer ${env.apiToken}`);
+  }
+
+  const result = await fetch(url, { headers })
+    .then((res) => {
+      if (!res.ok) {
+        throw Error(`Failed to fetch tags: ${res.status}`);
+      }
+      return res;
+    })
+    .then((res) => {
+      return res.text();
+    }).then((body) => {
+      return JSON.parse(body) as ReleasesAPIResponse;
+    });
+
+  const map = new Map<string, string>();
+  result
+    .map((result) => ({
+      tag: result.tag_name,
+      zip: result.assets.find((v) => v.name.endsWith('.zip'))?.browser_download_url,
+    }))
+    .forEach((release) => {
+      if(typeof release.zip === 'string') {
+        map.set(release.tag, release.zip);
+      }
+    });
+
+  return map;
+}
+
 const getFileContent = async function (
   owner: string,
   repo: string,
@@ -67,4 +112,4 @@ const getFileContent = async function (
   return body;
 };
 
-export { getFileContent, getTags };
+export { getTags, getPkgReleases, getFileContent };
