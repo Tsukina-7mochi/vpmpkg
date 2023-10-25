@@ -5,6 +5,7 @@ import env from './env.ts';
 import { serveDir } from 'http/file_server.ts';
 import { contentType } from 'media_types';
 import { extname } from 'std/path/extname.ts';
+import logHandler from './logHandler.ts';
 
 const cache = new CustomCache(env.cacheDir);
 
@@ -17,12 +18,10 @@ const handler_ = async (request: Request): Promise<Response> => {
   if(url.pathname.startsWith('/web')) {
     const res = await serveDir(request, {
       fsRoot: env.pubDir,
-      urlRoot: 'web'
+      urlRoot: 'web',
     });
 
     const type = contentType(extname(url.pathname));
-    console.log(extname(url.pathname), type);
-
     if(typeof type === 'string') {
       return new Response((await res).body, {
         headers: {
@@ -97,6 +96,6 @@ const serverErrorResponsePromise = Promise.resolve(
     },
   ),
 );
-const handler = wrapInTry(handler_, () => serverErrorResponsePromise);
+const handler = logHandler(wrapInTry(handler_, () => serverErrorResponsePromise));
 
 export default handler;
