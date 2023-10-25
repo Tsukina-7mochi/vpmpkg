@@ -2,6 +2,9 @@ import CustomCache from './cache.ts';
 import createRepoManifest from './createRepoManifest.ts';
 import wrapInTry from './wrapInTry.ts';
 import env from './env.ts';
+import { serveDir } from 'http/file_server.ts';
+import { contentType } from 'media_types';
+import { extname } from 'std/path/extname.ts';
 
 const cache = new CustomCache(env.cacheDir);
 
@@ -9,7 +12,27 @@ const handler_ = async (request: Request): Promise<Response> => {
   const url = new URL(request.url);
 
   if(url.pathname === '/') {
-    return new Response('OK');
+    return Response.redirect('/web/index.html');
+  }
+  if(url.pathname.startsWith('/web')) {
+    const res = await serveDir(request, {
+      fsRoot: env.pubDir,
+      urlRoot: 'web'
+    });
+
+    const type = contentType(extname(url.pathname));
+    console.log(extname(url.pathname), type);
+
+    if(typeof type === 'string') {
+      return new Response((await res).body, {
+        headers: {
+          ...res.headers,
+          "Content-Type": type,
+        }
+      });
+    } else {
+      return res;
+    }
   }
 
   const pathSegments = url.pathname.split('/');
