@@ -1,12 +1,11 @@
 import CustomCache from './cache.ts';
 import createRepoManifest from './createRepoManifest.ts';
-import wrapInTry from './wrapInTry.ts';
 import { serveDir } from 'http/file_server.ts';
 import { contentType } from 'media_types';
 import { extname } from 'std/path/extname.ts';
-import logHandler from './logHandler.ts';
 import { Config } from './config.ts';
 import { Handler } from './types.ts';
+import logRequestResponse from './logRequestResponse.ts';
 
 const serverErrorResponse = new Response(
   JSON.stringify({
@@ -27,7 +26,7 @@ const onServerError = function (err: any): Response {
 const handler = (config: Config): Handler => {
   const cache = new CustomCache(config.cachePath);
 
-  const handler: Handler = async (request: Request): Promise<Response> => {
+  const handler = async (request: Request): Promise<Response> => {
     const url = new URL(request.url);
 
     if (url.pathname === '/') {
@@ -103,7 +102,13 @@ const handler = (config: Config): Handler => {
     }
   };
 
-  return logHandler(wrapInTry(handler, onServerError));
+  return (req: Request) =>
+    handler(req)
+      .catch(onServerError)
+      .then((res) => {
+        logRequestResponse(req, res);
+        return res;
+      });
 };
 
 export default handler;
