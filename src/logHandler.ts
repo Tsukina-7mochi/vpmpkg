@@ -1,4 +1,4 @@
-type Handler = (req: Request) => Response | Promise<Response>;
+import { Handler } from './types.ts';
 
 const logRequestResponse = function (req: Request, res: Response): void {
   const date = new Date().toISOString();
