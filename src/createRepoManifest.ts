@@ -1,4 +1,5 @@
-import CustomCache from './cache.ts';
+import { AsyncCustomCache, CustomCache } from './cache.ts';
+import { Config } from './config.ts';
 import * as ghAPI from './ghApi.ts';
 import { VMPPackageManifest, VPMRepoManifest } from './types.ts';
 
@@ -14,12 +15,19 @@ const createRepoManifest = async function (
   pkgManifestPath: string,
   pkgId: string,
   manifestUrl: string,
-  cache?: CustomCache,
+  config: Config,
+  releaseAPICache: CustomCache<Uint8Array> | AsyncCustomCache<Uint8Array>,
+  contentAPICache: CustomCache<Uint8Array> | AsyncCustomCache<Uint8Array>,
 ): Promise<VPMRepoManifest> {
-  const releases = await ghAPI.getPkgReleases(owner, repo);
+  const releases = await ghAPI.getPkgReleases(
+    owner,
+    repo,
+    config.ghApiToken,
+    releaseAPICache,
+  );
   const tags = [...releases.keys()];
   const pkgManifestPromises = tags.map((tag) =>
-    ghAPI.getFileContent(owner, repo, tag, pkgManifestPath, cache)
+    ghAPI.getFileContent(owner, repo, tag, pkgManifestPath, contentAPICache)
       .then((v) => [tag, v] as const)
   );
   const pkgManifestResults = await Promise.allSettled(pkgManifestPromises);

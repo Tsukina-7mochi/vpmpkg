@@ -1,4 +1,5 @@
-import CustomCache from './cache.ts';
+import { DiskCache, InMemoryCache } from './cache.ts';
+import { createCachedHandler } from './cachedHandler.ts';
 import createRepoManifest from './createRepoManifest.ts';
 import { serveDir } from 'http/file_server.ts';
 import { contentType } from 'media_types';
@@ -6,6 +7,7 @@ import { extname } from 'std/path/extname.ts';
 import { Config } from './config.ts';
 import { Handler } from './types.ts';
 import logRequestResponse from './logRequestResponse.ts';
+import * as posix from 'path/posix/mod.ts';
 
 const serverErrorResponse = new Response(
   JSON.stringify({
@@ -24,33 +26,46 @@ const onServerError = function (err: any): Response {
 };
 
 const handler = (config: Config): Handler => {
-  const cache = new CustomCache(config.cachePath);
+  const resultCache = new InMemoryCache<Response>(config.requestCacheTTL);
+  const releaseAPICache = new DiskCache(
+    posix.join(config.cachePath, 'api', 'release'),
+    config.apiCacheTTL,
+  );
+  const contentAPICache = new DiskCache(
+    posix.join(config.cachePath, 'api', 'release'),
+  ); // permanent cache
+  const publicCache = new InMemoryCache<Response>(); // permanent cache
 
-  const handler = async (request: Request): Promise<Response> => {
-    const url = new URL(request.url);
+  setInterval(() => resultCache.clean(), config.requestCacheTTL);
+  setInterval(() => releaseAPICache.clean(), config.apiCacheTTL);
 
-    if (url.pathname === '/') {
-      return Response.redirect(new URL('/web/index.html', request.url));
+  const publicHandler = async (
+    request: Request,
+    url: URL,
+  ): Promise<Response> => {
+    if (!url.pathname.startsWith('/web')) {
+      throw Error('Cannot handle path not starts with /web');
     }
-    if (url.pathname.startsWith('/web')) {
-      const res = await serveDir(request, {
-        fsRoot: config.publicPath,
-        urlRoot: 'web',
+
+    const res = await serveDir(request, {
+      fsRoot: config.publicPath,
+      urlRoot: 'web',
+    });
+
+    const type = contentType(extname(url.pathname));
+    if (res.ok && typeof type === 'string') {
+      return new Response((await res).body, {
+        headers: {
+          ...res.headers,
+          'Content-Type': type,
+        },
       });
-
-      const type = contentType(extname(url.pathname));
-      if (typeof type === 'string') {
-        return new Response((await res).body, {
-          headers: {
-            ...res.headers,
-            'Content-Type': type,
-          },
-        });
-      } else {
-        return res;
-      }
+    } else {
+      return res;
     }
+  };
 
+  const apiHandler = async (url: URL): Promise<Response> => {
     const pathSegments = url.pathname.split('/');
     if (pathSegments.length < 4) {
       return new Response(JSON.stringify({
@@ -84,7 +99,9 @@ const handler = (config: Config): Handler => {
         pkgManifestPath,
         pkgId,
         url.href,
-        cache,
+        config,
+        releaseAPICache,
+        contentAPICache,
       );
 
       return new Response(JSON.stringify(manifest));
@@ -102,13 +119,41 @@ const handler = (config: Config): Handler => {
     }
   };
 
-  return (req: Request) =>
-    handler(req)
-      .catch(onServerError)
-      .then((res) => {
-        logRequestResponse(req, res);
-        return res;
-      });
+  const handler = async (request: Request): Promise<Response> => {
+    const url = new URL(request.url);
+
+    if (url.pathname === '/') {
+      return Response.redirect(new URL('/web/index.html', request.url));
+    }
+    if (url.pathname.startsWith('/web')) {
+      const cached = publicCache.get(url.href);
+      if (cached !== null) {
+        return Promise.resolve(cached);
+      }
+
+      const response = await publicHandler(request, url);
+      if (response.ok) {
+        publicCache.set(url.href, response);
+      }
+      return response;
+    }
+
+    return apiHandler(url);
+  };
+
+  const caughtHandler = (req: Request) => handler(req).catch(onServerError);
+  const cachedHandler = createCachedHandler(
+    caughtHandler,
+    resultCache,
+    (req) => {
+      console.log('Cached', req.url);
+    },
+  );
+  return (req) =>
+    Promise.resolve(cachedHandler(req)).then((res) => {
+      logRequestResponse(req, res);
+      return res;
+    });
 };
 
 export default handler;

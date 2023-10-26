@@ -1,13 +1,14 @@
-import CustomCache from './cache.ts';
+import { AsyncCustomCache, CustomCache, NoCache } from './cache.ts';
 
 const apiEndPoint = new URL('https://api.github.com');
 
 const textDecoder = new TextDecoder();
 
-const getTags = function (
+const getTags = async function (
   owner: string,
   repo: string,
   apiToken?: string | null,
+  cache: CustomCache<Uint8Array> | AsyncCustomCache<Uint8Array> = new NoCache(),
 ): Promise<string[]> {
   const url = new URL(`/repos/${owner}/${repo}/tags`, apiEndPoint);
 
@@ -19,19 +20,19 @@ const getTags = function (
     headers.append('Authorization', `Bearer ${apiToken}`);
   }
 
-  return fetch(url, { headers })
-    .then((res) => {
-      if (!res.ok) {
-        throw Error(`Failed to fetch tags: ${res.status}`);
-      }
-      return res;
-    })
-    .then((res) => {
-      return res.text();
-    }).then((body) => {
-      const result = JSON.parse(body) as Required<{ name: string }>[];
-      return result.map((tag) => tag.name);
-    });
+  const body = await cache.getOrElse(url.href, async () => {
+    const res = await fetch(url, { headers });
+    if (!res.ok) {
+      throw Error(`Failed to fetch tags: ${res.status}`);
+    }
+    const buf = await res.arrayBuffer();
+    return new Uint8Array(buf);
+  });
+  const result = JSON.parse(textDecoder.decode(body)) as Required<
+    { name: string }
+  >[];
+
+  return result.map((tag) => tag.name);
 };
 
 type ReleasesAPIResponse = Required<{
@@ -42,6 +43,7 @@ const getPkgReleases = async function (
   owner: string,
   repo: string,
   apiToken?: string | null,
+  cache: CustomCache<Uint8Array> | AsyncCustomCache<Uint8Array> = new NoCache(),
 ): Promise<Map<string, string>> {
   const url = new URL(`/repos/${owner}/${repo}/releases`, apiEndPoint);
   const headers = new Headers({
@@ -52,18 +54,15 @@ const getPkgReleases = async function (
     headers.append('Authorization', `Bearer ${apiToken}`);
   }
 
-  const result = await fetch(url, { headers })
-    .then((res) => {
-      if (!res.ok) {
-        throw Error(`Failed to fetch tags: ${res.status}`);
-      }
-      return res;
-    })
-    .then((res) => {
-      return res.text();
-    }).then((body) => {
-      return JSON.parse(body) as ReleasesAPIResponse;
-    });
+  const body = await cache.getOrElse(url.href, async () => {
+    const res = await fetch(url, { headers });
+    if (!res.ok) {
+      throw Error(`Failed to fetch releases: ${res.status}`);
+    }
+    const buf = await res.arrayBuffer();
+    return new Uint8Array(buf);
+  });
+  const result = JSON.parse(textDecoder.decode(body)) as ReleasesAPIResponse;
 
   const map = new Map<string, string>();
   result
@@ -86,7 +85,7 @@ const getFileContent = async function (
   repo: string,
   ref: string,
   path: string,
-  cache?: CustomCache,
+  cache: CustomCache<Uint8Array> | AsyncCustomCache<Uint8Array> = new NoCache(),
 ): Promise<string> {
   if (!path.startsWith('/')) {
     throw Error('path must start with "/".');
@@ -95,26 +94,15 @@ const getFileContent = async function (
     `https://raw.githubusercontent.com/${owner}/${repo}/${ref}${path}`,
   );
 
-  if (cache !== undefined) {
-    const cached = await cache.get(url.href);
-    if (cached !== null) {
-      return textDecoder.decode(cached);
-    }
-  }
-
-  const res = await fetch(url).then((res) => {
+  const body = await cache.getOrElse(url.href, async () => {
+    const res = await fetch(url);
     if (!res.ok) {
-      throw Error(`Failed to fetch tags: ${res.status}`);
+      throw Error(`Failed to fetch file content: ${res.status}`);
     }
-    return res;
+    const buf = await res.arrayBuffer();
+    return new Uint8Array(buf);
   });
-  const body = await res.text();
-
-  if (cache !== undefined) {
-    await cache.set(url.href, body);
-  }
-
-  return body;
+  return textDecoder.decode(body);
 };
 
 export { getFileContent, getPkgReleases, getTags };

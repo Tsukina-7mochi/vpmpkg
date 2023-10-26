@@ -9,6 +9,8 @@ type Config = {
   port: number;
   tlsCertFilePath: string | null;
   tlsKeyFilePath: string | null;
+  apiCacheTTL: number;
+  requestCacheTTL: number;
 };
 
 const fromEnv = async function (): Promise<Config> {
@@ -24,6 +26,8 @@ const fromEnv = async function (): Promise<Config> {
     port: Number(env.get('PORT')),
     tlsCertFilePath: env.getOrNull('TLS_CERT_FILE_PATH'),
     tlsKeyFilePath: env.getOrNull('TLS_KEY_FILE_PATH'),
+    apiCacheTTL: parseInt(env.get('API_CACHE_TTL')),
+    requestCacheTTL: parseInt(env.get('CACHE_TTL')),
   };
 };
 
