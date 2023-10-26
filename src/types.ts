@@ -1,3 +1,5 @@
+type Handler = (req: Request) => Response | Promise<Response>;
+
 type UnityPackageManifest = {
   name: string;
   version: string;
@@ -42,4 +44,4 @@ type VPMRepoManifest = {
   };
 };
 
-export type { VMPPackageManifest, VPMRepoManifest };
+export type { Handler, VMPPackageManifest, VPMRepoManifest };

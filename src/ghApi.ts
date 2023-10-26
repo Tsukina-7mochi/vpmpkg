@@ -1,19 +1,22 @@
 import CustomCache from './cache.ts';
-import env from './env.ts';
 
 const apiEndPoint = new URL('https://api.github.com');
 
 const textDecoder = new TextDecoder();
 
-const getTags = function (owner: string, repo: string): Promise<string[]> {
+const getTags = function (
+  owner: string,
+  repo: string,
+  apiToken?: string | null,
+): Promise<string[]> {
   const url = new URL(`/repos/${owner}/${repo}/tags`, apiEndPoint);
 
   const headers = new Headers({
     'Accept': 'application/vnd.github+json',
     'X-GitHub-Api-Version': '2022-11-28',
   });
-  if (typeof env.apiToken === 'string') {
-    headers.append('Authorization', `Bearer ${env.apiToken}`);
+  if (typeof apiToken === 'string') {
+    headers.append('Authorization', `Bearer ${apiToken}`);
   }
 
   return fetch(url, { headers })
@@ -38,14 +41,15 @@ type ReleasesAPIResponse = Required<{
 const getPkgReleases = async function (
   owner: string,
   repo: string,
+  apiToken?: string | null,
 ): Promise<Map<string, string>> {
   const url = new URL(`/repos/${owner}/${repo}/releases`, apiEndPoint);
   const headers = new Headers({
     'Accept': 'application/vnd.github+json',
     'X-GitHub-Api-Version': '2022-11-28',
   });
-  if (typeof env.apiToken === 'string') {
-    headers.append('Authorization', `Bearer ${env.apiToken}`);
+  if (typeof apiToken === 'string') {
+    headers.append('Authorization', `Bearer ${apiToken}`);
   }
 
   const result = await fetch(url, { headers })

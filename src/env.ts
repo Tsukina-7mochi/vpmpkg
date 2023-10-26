@@ -1,4 +1,3 @@
-import * as colors from 'fmt/colors.ts';
 import * as dotenv from 'dotenv';
 
 const dotenvContent = await dotenv.load({ envPath: './.env' });
@@ -8,43 +7,37 @@ for (const key in dotenvContent) {
   }
 }
 
-const apiToken = Deno.env.get('GH_API_TOKEN');
-const cacheDir = Deno.env.get('CACHE_DIR');
-const pubDir = Deno.env.get('PUB_DIR');
-const hostname = Deno.env.get('HOSTNAME');
-const port = Deno.env.get('PORT');
-const tlsCertFilePath = Deno.env.get('TLS_CERT_FILE_PATH');
-const tlsKeyFilePath = Deno.env.get('TLS_KEY_FILE_PATH');
+class Env {
+  values: Record<string, string>;
 
-if (typeof cacheDir !== 'string') {
-  throw Error('Cache directory not specified.');
-}
-if (typeof pubDir !== 'string') {
-  throw Error('Public directory not specified.');
-}
-if (typeof hostname !== 'string') {
-  throw Error('Hostname not specified.');
-}
-if (typeof port !== 'string') {
-  throw Error('Port not specified.');
+  constructor() {
+    this.values = Deno.env.toObject();
+  }
+
+  async loadEnvFile(path: string, overwrite = true): Promise<void> {
+    const content = await dotenv.load({ envPath: path });
+
+    for (const key in content) {
+      if (!(key in this.values) || overwrite) {
+        this.values[key] = content[key];
+      }
+    }
+  }
+
+  get(key: string): string {
+    if (!(key in this.values)) {
+      throw Error(`environment variable ${key} is not found.`);
+    }
+    return this.values[key];
+  }
+
+  getOrElse<T>(key: string, defaultValue: T): string | T {
+    return this.values[key] ?? defaultValue;
+  }
+
+  getOrNull(key: string): string | null {
+    return this.getOrElse(key, null);
+  }
 }
 
-if (typeof apiToken !== 'string') {
-  console.log(
-    `${
-      colors.yellow('Warning')
-    }: GitHub API Token not found. Using public API.`,
-  );
-}
-
-const env = {
-  apiToken,
-  cacheDir,
-  pubDir,
-  hostname,
-  port: parseInt(port),
-  tlsCertFilePath,
-  tlsKeyFilePath,
-};
-
-export default env;
+export default Env;
