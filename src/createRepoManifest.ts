@@ -2,6 +2,7 @@ import { AsyncCustomCache, CustomCache } from './cache.ts';
 import { Config } from './config.ts';
 import * as ghAPI from './ghApi.ts';
 import { VMPPackageManifest, VPMRepoManifest } from './types.ts';
+import { FetchError } from './ghApi.ts';
 
 const isFulfilled = <T>(
   promise: PromiseSettledResult<T>,
@@ -39,7 +40,7 @@ const createRepoManifest = async function (
     });
 
   if (pkgManifests.length === 0) {
-    throw Error('Cannot fetch any package.json');
+    throw new FetchError('Cannot fetch any package.json');
   }
 
   const pkgVersions: Record<string, VMPPackageManifest> = {};
