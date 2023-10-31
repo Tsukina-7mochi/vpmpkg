@@ -1,32 +1,34 @@
-import { DiskCache, InMemoryCache } from './cache.ts';
-import { createCachedHandler } from './cachedHandler.ts';
+import { Hono } from 'hono';
+import { cache, serveStatic } from 'hono/middleware.ts';
+import * as color from 'color';
+import { DiskCache } from './cache.ts';
 import createRepoManifest from './createRepoManifest.ts';
-import { serveDir } from 'http/file_server.ts';
-import { contentType } from 'media_types';
-import { extname } from 'std/path/extname.ts';
 import { Config } from './config.ts';
-import { Handler } from './types.ts';
-import logRequestResponse from './logRequestResponse.ts';
 import * as posix from 'path/posix/mod.ts';
+import { FetchError } from './ghApi.ts';
 
-const serverErrorResponse = new Response(
-  JSON.stringify({
-    message: 'Something went wrong in the server.',
-  }),
-  {
-    status: 500,
-    statusText: 'Internal Server Error',
-  },
-);
-// deno-lint-ignore no-explicit-any
-const onServerError = function (err: any): Response {
-  console.error(err);
+const toIdCompatibleString = (str: string) =>
+  str.toLowerCase().replace(/[^\w._\-]/g, '');
 
-  return serverErrorResponse;
+const getStatusColor = function (status: number): (text: string) => string {
+  if (status < 200) {
+    return (text: string) => `${color.bold(String(status))} ${text}`;
+  } else if (status < 300) {
+    return (text: string) =>
+      color.brightGreen(`${color.bold(String(status))} ${text}`);
+  } else if (status < 400) {
+    return (text: string) =>
+      color.brightBlue(`${color.bold(String(status))} ${text}`);
+  } else if (status < 500) {
+    return (text: string) =>
+      color.brightYellow(`${color.bold(String(status))} ${text}`);
+  } else {
+    return (text: string) =>
+      color.brightRed(`${color.bold(String(status))} ${text}`);
+  }
 };
 
-const handler = (config: Config): Handler => {
-  const resultCache = new InMemoryCache<Response>(config.requestCacheTTL);
+const handler = (config: Config): Hono => {
   const releaseAPICache = new DiskCache(
     posix.join(config.cachePath, 'api', 'release'),
     config.apiCacheTTL,
@@ -34,126 +36,92 @@ const handler = (config: Config): Handler => {
   const contentAPICache = new DiskCache(
     posix.join(config.cachePath, 'api', 'release'),
   ); // permanent cache
-  const publicCache = new InMemoryCache<Response>(); // permanent cache
 
-  setInterval(() => resultCache.clean(), config.requestCacheTTL);
   setInterval(() => releaseAPICache.clean(), config.apiCacheTTL);
 
-  const publicHandler = async (
-    request: Request,
-    url: URL,
-  ): Promise<Response> => {
-    if (!url.pathname.startsWith('/web')) {
-      throw Error('Cannot handle path not starts with /web');
-    }
+  const app = new Hono();
 
-    const res = await serveDir(request, {
-      fsRoot: config.publicPath,
-      urlRoot: 'web',
-    });
+  app.use('*', async (c, next) => {
+    const startTime = Date.now();
 
-    const type = contentType(extname(url.pathname));
-    if (res.ok && typeof type === 'string') {
-      return new Response((await res).body, {
-        headers: {
-          ...res.headers,
-          'Content-Type': type,
-        },
-      });
-    } else {
-      return res;
-    }
-  };
+    await next();
 
-  const apiHandler = async (url: URL): Promise<Response> => {
-    const pathSegments = url.pathname.split('/');
-    if (pathSegments.length < 4) {
-      return new Response(JSON.stringify({
-        message: 'Bad Request',
-        usage: '/{OWNER}/{REPO}/{PATH}',
-      }));
-    }
+    const endTime = Date.now();
 
-    const owner = pathSegments[1];
-    const repo = pathSegments[2];
-    const pkgManifestPath = ((): string => {
-      const path = `/${pathSegments.slice(3).join('/')}`;
-      if (path.endsWith('/')) {
-        return `${path}package.json`;
-      }
-      return path;
-    })();
-    const idOwner = owner.toLowerCase().replace(/\W/, '');
-    const idRepo = repo.toLowerCase().replace(/\W/, '');
-    let pkgId = `net.ts7m.vpmpkg.${idOwner}.${idRepo}`;
-    for (const [key, value] of url.searchParams) {
-      if (key === 'pkgId') {
-        pkgId = value;
-      }
-    }
+    const message = `
+    |${color.bold(c.req.method)}
+    | ${c.req.path}
+    | ${getStatusColor(c.res.status)(c.res.statusText)}
+    | (${color.gray(`${endTime - startTime}`)}ms)
+    | `.replace(/(\r|\n|\r\n)\s*\|/g, '');
+    console.log(message);
+  });
 
-    try {
-      const manifest = await createRepoManifest(
-        owner,
-        repo,
-        pkgManifestPath,
-        pkgId,
-        url.href,
-        config,
-        releaseAPICache,
-        contentAPICache,
-      );
+  app.onError((err, c) => {
+    console.error(err);
+    return c.text('Something went wrong', 500);
+  });
 
-      return new Response(JSON.stringify(manifest));
-    } catch (err_) {
-      const err = err_ instanceof Error
-        ? ({ message: err_.message, cause: err_.cause })
-        : err_;
-      return new Response(
-        JSON.stringify({
-          message: 'Not Found',
-          cause: err,
-        }),
-        { status: 404, statusText: 'Not Found' },
-      );
-    }
-  };
+  app.get('/', (c) => c.redirect('/static/index.html'));
 
-  const handler = async (request: Request): Promise<Response> => {
-    const url = new URL(request.url);
-
-    if (url.pathname === '/') {
-      return Response.redirect(new URL('/web/index.html', request.url));
-    }
-    if (url.pathname.startsWith('/web')) {
-      const cached = publicCache.get(url.href);
-      if (cached !== null) {
-        return Promise.resolve(cached);
-      }
-
-      const response = await publicHandler(request, url);
-      if (response.ok) {
-        publicCache.set(url.href, response);
-      }
-      return response;
-    }
-
-    return apiHandler(url);
-  };
-
-  const caughtHandler = (req: Request) => handler(req).catch(onServerError);
-  const cachedHandler = createCachedHandler(
-    caughtHandler,
-    resultCache,
-    (req) => {
-      console.log('Cached', req.url);
-    },
+  const staticPath = '/static/*';
+  app.get(
+    staticPath,
+    cache({
+      cacheName: 'vpmpkg.ts7m.net.static',
+      cacheControl: 'max-age=3600',
+      wait: true,
+    }),
   );
-  return (req) =>
-    Promise.resolve(cachedHandler(req)).then((res) => {
-      logRequestResponse(req, res);
-      return res;
-    });
+  app.get(
+    staticPath,
+    serveStatic({
+      root: config.publicPath,
+      rewriteRequestPath: (path) => path.replace(/^\/static/, ''),
+    }),
+  );
+
+  const apiPath = '/:owner/:repo/:path{.+$}';
+  app.get(
+    apiPath,
+    cache({
+      cacheName: 'vpmpkg.ts7m.net.api',
+      cacheControl: 'max-age=60',
+      wait: true,
+    }),
+  );
+  app.get(apiPath, (c) => {
+    const owner = c.req.param('owner');
+    const repo = c.req.param('repo');
+    const manifestPath = (() => {
+      const path = '/' + c.req.param('path');
+      return path.endsWith('/') ? `${path}package.json` : path;
+    })();
+    const pkgId = c.req.query('pkgId') ??
+      toIdCompatibleString(`net.ts7m.vpmpkg.${owner}.${repo}`);
+
+    const manifestPromise = createRepoManifest(
+      owner,
+      repo,
+      manifestPath,
+      pkgId,
+      c.req.url,
+      config,
+      releaseAPICache,
+      contentAPICache,
+    );
+    return manifestPromise
+      .then((manifest) => c.json(manifest))
+      .catch((err) => {
+        if (err instanceof FetchError) {
+          return c.notFound();
+        } else {
+          throw err;
+        }
+      });
+  });
+
+  return app;
 };
 
 export default handler;

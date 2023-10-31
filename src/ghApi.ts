@@ -1,7 +1,8 @@
 import { AsyncCustomCache, CustomCache, NoCache } from './cache.ts';
 
-const apiEndPoint = new URL('https://api.github.com');
+class FetchError extends Error {}
 
+const apiEndPoint = new URL('https://api.github.com');
 const textDecoder = new TextDecoder();
 
 const getTags = async function (
@@ -23,7 +24,7 @@ const getTags = async function (
   const body = await cache.getOrElse(url.href, async () => {
     const res = await fetch(url, { headers });
     if (!res.ok) {
-      throw Error(`Failed to fetch tags: ${res.status}`);
+      throw new FetchError(`Failed to fetch tags: ${res.status}`);
     }
     const buf = await res.arrayBuffer();
     return new Uint8Array(buf);
@@ -57,7 +58,7 @@ const getPkgReleases = async function (
   const body = await cache.getOrElse(url.href, async () => {
     const res = await fetch(url, { headers });
     if (!res.ok) {
-      throw Error(`Failed to fetch releases: ${res.status}`);
+      throw new FetchError(`Failed to fetch releases: ${res.status}`);
     }
     const buf = await res.arrayBuffer();
     return new Uint8Array(buf);
@@ -97,7 +98,7 @@ const getFileContent = async function (
   const body = await cache.getOrElse(url.href, async () => {
     const res = await fetch(url);
     if (!res.ok) {
-      throw Error(`Failed to fetch file content: ${res.status}`);
+      throw new FetchError(`Failed to fetch file content: ${res.status}`);
     }
     const buf = await res.arrayBuffer();
     return new Uint8Array(buf);
@@ -105,4 +106,4 @@ const getFileContent = async function (
   return textDecoder.decode(body);
 };
 
-export { getFileContent, getPkgReleases, getTags };
+export { FetchError, getFileContent, getPkgReleases, getTags };
